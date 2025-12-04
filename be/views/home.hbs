@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {{> header}}
+
+    <main>
+        <h1>{{title}}</h1>
+        
+        <div class="welcome-section">
+            <p>Welcome to our community forum! Connect with other members, share your thoughts, and engage in meaningful discussions.</p>
+            <div class="action-buttons">
+                {{#if user}}
+                    <a href="/comments" class="btn">View All Posts</a>
+                    <a href="/comment/new" class="btn">Create New Post</a>
+                {{else}}
+                    <a href="/login" class="btn">Login to Participate</a>
+                    <a href="/register" class="btn btn-secondary">Join Our Community</a>
+                {{/if}}
+            </div>
+        </div>
+
+        {{#if comments}}
+        <div class="recent-activity">
+            <h2>Recent Activity</h2>
+            <div class="comments-container">
+                {{#each comments}}
+                <div class="comment-item">
+                    <div class="comment-header">
+                        <span class="comment-author">{{this.author}}</span>
+                        <span class="comment-date">{{this.createdAt}}</span>
+                    </div>
+                    <div class="comment-content">{{this.text}}</div>
+                </div>
+                {{/each}}
+            </div>
+            <div class="text-center mt-2">
+                <a href="/comments" class="btn">View All Posts</a>
+            </div>
+        </div>
+        {{else}}
+        <div class="recent-activity">
+            <h2>Get Started</h2>
+            <p class="text-center">No posts yet. Be the first to start a discussion!</p>
+        </div>
+        {{/if}}
+    </main>
+
+    {{> footer}}
+</body>
+</html>
+

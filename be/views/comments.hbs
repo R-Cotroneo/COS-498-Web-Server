@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum Posts - {{title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {{> header}}
+
+    <main>
+        <h1>Forum Discussions</h1>
+
+        <div class="text-center mb-3">
+            {{#if user}}
+            <a href="/comment/new" class="btn">Create New Post</a>
+            {{else}}
+            <a href="/login" class="btn">Login to Post</a>
+            {{/if}}
+        </div>
+
+        {{#if comments}}
+        <div class="comments-container">
+            {{#each comments}}
+            <div class="comment-item">
+                <div class="comment-header">
+                    <span class="comment-author">{{this.author}}</span>
+                    <span class="comment-date">{{this.createdAt}}</span>
+                </div>
+                <div class="comment-content">
+                    {{this.text}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+
+        {{else}}
+        <div class="comments-container">
+            <div class="comment-item text-center">
+                <h3>No Posts Yet</h3>
+                <p>Be the first to start a discussion in our forum!</p>
+                {{#if user}}
+                <a href="/comment/new" class="btn mt-2">Create the First Post</a>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
+    </main>
+
+    {{> footer}}
+</body>
+</html>
