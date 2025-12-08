@@ -7,6 +7,10 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4610
+    # Mounting database directory due to issue where the docker compose was saving
+    # data to its own created database file instead of the one.
+    volumes:
+      - ./be/db:/app/db
     # No ports exposed - only nginx can access this container
     networks:
       - app-network
