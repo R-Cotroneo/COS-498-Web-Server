@@ -59,11 +59,23 @@ function updateLoginTime(id) {
     stmt.run(id);
 }
 
+function createSession(sessionData) {
+    const insert = db.prepare('INSERT INTO sessions (session_id, user_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+    insert.run(sessionData.id, sessionData.userId);
+}
+
+function deleteSession(sessionData) {
+    const del = db.prepare('DELETE FROM sessions WHERE session_id = ?');
+    del.run(sessionData.id);
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
     createLoginAttempts,
     getLockoutInfo,
     deleteLockoutAttempts,
-    updateLoginTime
+    updateLoginTime,
+    createSession,
+    deleteSession
 };

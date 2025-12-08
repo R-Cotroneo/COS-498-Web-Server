@@ -5,7 +5,9 @@ const path = require('path');
 const { 
     createUser, 
     getUserByUsername, 
-    updateLoginTime 
+    updateLoginTime,
+    createSession,
+    deleteSession
 } = require('../middleware/database');
 const { hashPassword, validatePassword, verifyPassword } = require('../middleware/pass-utils');
 const loginTracker = require('../middleware/loginTracker');
@@ -118,6 +120,10 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        req.session.userId = user.id;
+        req.session.username = username;
+        createSession(req.session);
+
     } catch (error) {
         console.error("Login error:", error);
         // Record as failed attempt on system error
@@ -133,6 +139,7 @@ router.post("/login", async (req, res) => {
 
 // Logout route
 router.post("/logout", (req, res) => {
+    deleteSession(req.session);
     req.session.destroy((err) => {
         if (err) {
             console.log('Error destroying session:', err);
