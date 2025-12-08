@@ -24,4 +24,46 @@ function getUserByUsername(username) {
     }
 }
 
-module.exports = { createUser, getUserByUsername };
+function createLoginAttempts(ip, username, success) {
+    const insert = db.prepare('INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, ?)');
+    insert.run(ip, username, success ? 1 : 0);
+}
+
+function getLockoutInfo(ipAddress, username, cutoffTime) {
+    const stmt = db.prepare(`
+        SELECT COUNT(*) as count, MAX(attempt_time) as last_attempt
+        FROM login_attempts
+        WHERE ip_address = ? 
+        AND username = ?
+        AND success = 0
+        AND datetime(attempt_time) > datetime(?, 'unixepoch')
+    `);
+  
+    const result = stmt.get(ipAddress, username, cutoffTime / 1000);
+    return result;
+}
+
+function deleteLockoutAttempts(cutoffTime) {
+    // 'unixepoch' interprets the number as seconds since Unix epoch (Jan 1, 1970)
+    const stmt = db.prepare(`
+        DELETE FROM login_attempts
+        WHERE datetime(attempt_time) < datetime(?, 'unixepoch')
+    `);
+
+    const result = stmt.run(cutoffTime / 1000);
+    return result;    
+}
+
+function updateLoginTime(id) {
+    const stmt = db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?');
+    stmt.run(id);
+}
+
+module.exports = { 
+    createUser,
+    getUserByUsername,
+    createLoginAttempts,
+    getLockoutInfo,
+    deleteLockoutAttempts,
+    updateLoginTime
+};
