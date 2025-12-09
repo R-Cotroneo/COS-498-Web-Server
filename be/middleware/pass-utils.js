@@ -1,4 +1,5 @@
 const argon2 = require('argon2');
+const { getUserCountByEmail, getUserCountByDisplayName } = require('../middleware/database');
 
 const argon2Options = {
     type: argon2.argon2id,
@@ -6,6 +7,74 @@ const argon2Options = {
     timeCost: 3,
     parallelism: 4
 };
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return {
+            isValid: false,
+            error: "Invalid email format."
+        };
+    }
+    const userCount = getUserCountByEmail(email);
+    if (userCount > 0) {
+        return {
+            isValid: false,
+            error: "Email is already in use."
+        };
+    }
+    return {
+        isValid: true,
+        error: ""
+    };
+}
+
+function validateDisplayName(display_name, username) {
+    // Check if display name is the same as username
+    if (display_name === username) {
+        return {
+            isValid: false,
+            error: "Display name cannot be the same as username."
+        };
+    }
+    
+    // Check if display name is already taken
+    const userCount = getUserCountByDisplayName(display_name);
+    if (userCount > 0) {
+        return {
+            isValid: false,
+            error: "Display name is already taken."
+        };
+    }
+    
+    // Check if display name is empty or just whitespace
+    if (!display_name || display_name.trim().length === 0) {
+        return {
+            isValid: false,
+            error: "Display name cannot be empty."
+        };
+    }
+    
+    // Check display name length
+    if (display_name.length < 2) {
+        return {
+            isValid: false,
+            error: "Display name must be at least 2 characters long."
+        };
+    }
+    
+    if (display_name.length > 50) {
+        return {
+            isValid: false,
+            error: "Display name must be 50 characters or less."
+        };
+    }
+    
+    return {
+        isValid: true,
+        error: ""
+    };
+}
 
 function validatePassword(password) {
     const errors = [];
@@ -57,5 +126,7 @@ async function verifyPassword(hash, password) {
 module.exports = {
     validatePassword,
     hashPassword,
-    verifyPassword
+    verifyPassword,
+    validateEmail,
+    validateDisplayName
 };

@@ -24,6 +24,26 @@ function getUserByUsername(username) {
     }
 }
 
+function getUserCountByEmail(email) {
+    try {
+        const result = db.prepare('SELECT COUNT(*) as count FROM users WHERE email = ?').get(email);
+        return result.count;
+    } catch (error) {
+        console.error("Error retrieving user by email:", error);
+        return 0;
+    }
+}
+
+function getUserCountByDisplayName(display_name) {
+    try {
+        const result = db.prepare('SELECT COUNT(*) as count FROM users WHERE display_name = ?').get(display_name);
+        return result.count;
+    } catch (error) {
+        console.error("Error retrieving user by display name:", error);
+        return 0;
+    }
+}
+
 function createLoginAttempts(ip, username, success) {
     const insert = db.prepare('INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, ?)');
     insert.run(ip, username, success ? 1 : 0);
@@ -72,6 +92,8 @@ function deleteSession(sessionData) {
 module.exports = { 
     createUser,
     getUserByUsername,
+    getUserCountByEmail,
+    getUserCountByDisplayName,
     createLoginAttempts,
     getLockoutInfo,
     deleteLockoutAttempts,

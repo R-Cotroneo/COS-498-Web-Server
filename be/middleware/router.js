@@ -1,7 +1,5 @@
 const express = require('express');
-const session = require('express-session');
 const router = express.Router();
-const path = require('path');
 const { 
     createUser, 
     getUserByUsername, 
@@ -9,7 +7,13 @@ const {
     createSession,
     deleteSession
 } = require('../middleware/database');
-const { hashPassword, validatePassword, verifyPassword } = require('../middleware/pass-utils');
+const { 
+    hashPassword,
+    validateEmail,
+    validatePassword,
+    validateDisplayName,
+    verifyPassword,
+} = require('../middleware/pass-utils');
 const loginTracker = require('../middleware/loginTracker');
 
 // Home route
@@ -24,12 +28,45 @@ router.get("/register", (req, res) => {
 
 router.post("/register", async (req, res) => {
     const { username, password, email, display_name } = req.body;
+    const inDataUser = getUserByUsername(username);
     
-    // Validate password
-    const validation = validatePassword(password);
-    if (!validation.isValid) {
+    if (username === inDataUser?.username) {
         return res.render("register", { 
-            error: validation.errors.join(' '), 
+            error: "Username is already taken.", 
+            username, 
+            email, 
+            display_name 
+        });
+    }
+
+    // Validate password
+    const passValidation = validatePassword(password);
+    if (!passValidation.isValid) {
+        return res.render("register", { 
+            error: passValidation.errors.join(' '), 
+            username, 
+            email, 
+            display_name 
+        });
+    }
+    
+    // This might not be necessary due to html having a built-in email verifier
+    // We'll call this extra security
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+        return res.render("register", { 
+            error: emailValidation.error, 
+            username, 
+            email, 
+            display_name 
+        });
+    }
+    
+    // Validate display name
+    const displayNameValidation = validateDisplayName(display_name, username);
+    if (!displayNameValidation.isValid) {
+        return res.render("register", { 
+            error: displayNameValidation.error, 
             username, 
             email, 
             display_name 
@@ -41,8 +78,7 @@ router.post("/register", async (req, res) => {
         const password_hash = await hashPassword(password);
         
         // Create user with hashed password
-        const result = createUser(username, password_hash, email, display_name);
-        console.log(`User registered successfully: ${username} (ID: ${result.lastInsertRowid})`);
+        createUser(username, password_hash, email, display_name);
         res.redirect("/login");
     } catch (error) {
         console.error("Registration error:", error);
