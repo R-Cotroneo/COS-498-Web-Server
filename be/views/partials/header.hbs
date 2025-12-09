@@ -9,7 +9,7 @@
       {{#if user}}
         <li><a href="/comment/new">New Post</a></li>
         <li class="user-info">
-          Welcome, <span class="username">{{user.username}}</span>
+          Welcome, <span class="username">{{user.display_name}}</span>
         </li>
         <li><a href="/profile">Profile</a></li>
         <li><form method="POST" action="/logout" class="logout-form"><button type="submit" class="logout-btn">Logout</button></form></li>

@@ -26,6 +26,7 @@ app.use((req, res, next) => {
     if (req.session && req.session.isLoggedIn) {
         res.locals.user = {
             username: req.session.username,
+            display_name: req.session.display_name || req.session.username,
             isLoggedIn: true
         };
     } else {

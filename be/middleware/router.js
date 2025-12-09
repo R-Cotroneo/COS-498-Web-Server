@@ -7,7 +7,8 @@ const {
     createSession,
     deleteSession,
     updateUsername,
-    updateSessionUsername
+    updateSessionUsername,
+    updateDisplayName
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -143,6 +144,7 @@ router.post("/login", async (req, res) => {
             // Set session
             req.session.username = username;
             req.session.userId = user.id;
+            req.session.display_name = user.display_name;
             req.session.isLoggedIn = true;
             
             // Create session in database
@@ -218,6 +220,22 @@ router.post("/profile/update-username", (req, res) => {
         res.redirect("/profile");
     } catch (error) {
         console.error("Error updating username:", error);
+        res.redirect("/profile?error=update_failed");
+    }
+});
+
+router.post("/profile/update-display-name", (req, res) => {
+    const username = req.session.username;
+    const newDisplayName = req.body.display_name;
+
+    try {
+        // Update display name in database
+        updateDisplayName(username, newDisplayName);
+        
+        console.log(`Display name updated for ${username} to ${newDisplayName}`);
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating display name:", error);
         res.redirect("/profile?error=update_failed");
     }
 });

@@ -107,6 +107,15 @@ function updateSessionUsername(sessionId, newUsername) {
     }
 }
 
+function updateDisplayName(username, newDisplayName) {
+    try {
+        const update = db.prepare('UPDATE users SET display_name = ? WHERE username = ?');
+        update.run(newDisplayName, username);
+    } catch (error) {
+        console.error("Error updating display name:", error);
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -119,5 +128,6 @@ module.exports = {
     createSession,
     deleteSession,
     updateUsername,
-    updateSessionUsername
+    updateSessionUsername,
+    updateDisplayName
 };
