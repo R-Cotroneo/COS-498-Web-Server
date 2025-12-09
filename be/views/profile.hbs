@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - {{title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- CSS for profile page is separated due to it being very specific to this page -->
+    <style>
+        .profile-field {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .edit-form {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .edit-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .edit-btn:hover {
+            background-color: #0056b3;
+        }
+        .cancel-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+        .cancel-btn:hover {
+            background-color: #545b62;
+        }
+    </style>
+</head>
+<body>
+    {{> header}}
+
+    <main>
+        <h1>Your Profile</h1>
+
+        {{#if error}}
+            <div class="error">{{error}}</div>
+        {{/if}}
+
+        <div class="profile-container">
+            <!-- Username Section -->
+            <div class="profile-field">
+                <div>
+                    <p><strong>Username:</strong> {{user.username}}</p>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit('username')">Edit</button>
+            </div>
+            <div id="username-edit" class="edit-form">
+                <form action="/profile/update-username" method="POST">
+                    <div class="form-group">
+                        <label for="new-username">New Username:</label>
+                        <input type="text" id="new-username" name="username" required placeholder="Enter new username" value="{{user.username}}">
+                    </div>
+                    <button type="submit" class="btn">Update Username</button>
+                    <button type="button" class="cancel-btn" onclick="toggleEdit('username')">Cancel</button>
+                </form>
+            </div>
+
+            <!-- Display Name Section -->
+            <div class="profile-field">
+                <div>
+                    <p><strong>Display Name:</strong> {{user.display_name}}</p>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit('display-name')">Edit</button>
+            </div>
+            <div id="display-name-edit" class="edit-form">
+                <form action="/profile/update-display-name" method="POST">
+                    <div class="form-group">
+                        <label for="new-display-name">New Display Name:</label>
+                        <input type="text" id="new-display-name" name="display_name" required placeholder="Enter new display name" value="{{user.display_name}}">
+                    </div>
+                    <button type="submit" class="btn">Update Display Name</button>
+                    <button type="button" class="cancel-btn" onclick="toggleEdit('display-name')">Cancel</button>
+                </form>
+            </div>
+
+            <!-- Email Section -->
+            <div class="profile-field">
+                <div>
+                    <p><strong>Email:</strong> {{user.email}}</p>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit('email')">Edit</button>
+            </div>
+            <div id="email-edit" class="edit-form">
+                <form action="/profile/update-email" method="POST">
+                    <div class="form-group">
+                        <label for="new-email">New Email:</label>
+                        <input type="email" id="new-email" name="email" required placeholder="Enter new email" value="{{user.email}}">
+                    </div>
+                    <button type="submit" class="btn">Update Email</button>
+                    <button type="button" class="cancel-btn" onclick="toggleEdit('email')">Cancel</button>
+                </form>
+            </div>
+
+            <!-- Name Color Section -->
+            <div class="profile-field">
+                <div>
+                    <p><strong>Name Color:</strong> <span style="color: {{user.name_color}};">{{user.name_color}}</span></p>
+                </div>
+                <button class="edit-btn" onclick="toggleEdit('name-color')">Edit</button>
+            </div>
+            <div id="name-color-edit" class="edit-form">
+                <form action="/profile/update-name-color" method="POST">
+                    <div class="form-group">
+                        <label for="new-name-color">New Name Color:</label>
+                        <input type="color" id="new-name-color" name="name_color" value="{{user.name_color}}">
+                        <input type="text" id="color-text" name="name_color_text" placeholder="#000000" value="{{user.name_color}}" style="margin-left: 1rem;">
+                    </div>
+                    <button type="submit" class="btn">Update Name Color</button>
+                    <button type="button" class="cancel-btn" onclick="toggleEdit('name-color')">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Color picking script which allows users to select a color either by text input or color picker -->
+    <script>
+        function toggleEdit(field) {
+            const editForm = document.getElementById(field + '-edit');
+            if (editForm.style.display === 'none' || editForm.style.display === '') {
+                editForm.style.display = 'block';
+            } else {
+                editForm.style.display = 'none';
+            }
+        }
+
+        // Sync color picker with text input
+        document.getElementById('new-name-color').addEventListener('input', function() {
+            document.getElementById('color-text').value = this.value;
+        });
+
+        document.getElementById('color-text').addEventListener('input', function() {
+            document.getElementById('new-name-color').value = this.value;
+        });
+    </script>
+
+    {{> footer}}
+</body>
+</html>

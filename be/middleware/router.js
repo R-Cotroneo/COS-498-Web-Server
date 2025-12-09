@@ -5,7 +5,9 @@ const {
     getUserByUsername, 
     updateLoginTime,
     createSession,
-    deleteSession
+    deleteSession,
+    updateUsername,
+    updateSessionUsername
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -110,7 +112,6 @@ router.post("/login", async (req, res) => {
     const lockoutStatus = loginTracker.checkLockout(clientIP, username);
     if (lockoutStatus.locked) {
         const timeLeft = loginTracker.formatRemainingTime(lockoutStatus.remainingTime);
-        const attemptStatus = loginTracker.getAttemptStatus(clientIP, username);
         return res.render("login", { 
             error: `Account locked due to too many failed attempts. Try again in ${timeLeft} minutes.`
         });
@@ -144,6 +145,12 @@ router.post("/login", async (req, res) => {
             req.session.userId = user.id;
             req.session.isLoggedIn = true;
             
+            // Create session in database
+            createSession({
+                sessionId: req.sessionID,
+                username: username
+            });
+            
             console.log(`User ${username} logged in successfully from ${clientIP}`);
             res.redirect("/");
         } else {
@@ -155,10 +162,6 @@ router.post("/login", async (req, res) => {
                 attemptStatus
             });
         }
-
-        req.session.userId = user.id;
-        req.session.username = username;
-        createSession(req.session);
 
     } catch (error) {
         console.error("Login error:", error);
@@ -175,13 +178,48 @@ router.post("/login", async (req, res) => {
 
 // Logout route
 router.post("/logout", (req, res) => {
-    deleteSession(req.session);
+    // Delete session from database
+    if (req.sessionID) {
+        deleteSession(req.sessionID);
+    }
+    
     req.session.destroy((err) => {
         if (err) {
             console.log('Error destroying session:', err);
         }
         res.redirect('/');
     });
+});
+
+// User Profile route
+router.get("/profile", (req, res) => {
+    if (!req.session || !req.session.isLoggedIn) {
+        return res.redirect("/login");
+    }
+    const user = getUserByUsername(req.session.username);
+    res.render("profile", { user });
+});
+
+router.post("/profile/update-username", (req, res) => {
+    const oldUsername = req.session.username;
+    const newUsername = req.body.username; // Fixed: changed from new_username to username
+    
+    try {
+        // Update username in database
+        updateUsername(oldUsername, newUsername);
+        
+        // Update session in database
+        updateSessionUsername(req.sessionID, newUsername);
+        
+        // Update session username in memory
+        req.session.username = newUsername;
+        
+        console.log(`Username updated from ${oldUsername} to ${newUsername}`);
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating username:", error);
+        res.redirect("/profile?error=update_failed");
+    }
 });
 
 // Comments route

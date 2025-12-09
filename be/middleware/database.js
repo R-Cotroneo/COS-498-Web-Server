@@ -80,13 +80,31 @@ function updateLoginTime(id) {
 }
 
 function createSession(sessionData) {
-    const insert = db.prepare('INSERT INTO sessions (session_id, user_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
-    insert.run(sessionData.id, sessionData.userId);
+    const insert = db.prepare('INSERT OR REPLACE INTO sessions (session_id, username, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+    insert.run(sessionData.sessionId, sessionData.username);
 }
 
-function deleteSession(sessionData) {
+function deleteSession(sessionId) {
     const del = db.prepare('DELETE FROM sessions WHERE session_id = ?');
-    del.run(sessionData.id);
+    del.run(sessionId);
+}
+
+function updateUsername(username, newUsername) {
+    try {
+        const update = db.prepare('UPDATE users SET username = ? WHERE username = ?');
+        update.run(newUsername, username);
+    } catch (error) {
+        console.error("Error updating username:", error);
+    }
+}
+
+function updateSessionUsername(sessionId, newUsername) {
+    try {
+        const update = db.prepare('UPDATE sessions SET username = ? WHERE session_id = ?');
+        update.run(newUsername, sessionId);
+    } catch (error) {
+        console.error("Error updating session username:", error);
+    }
 }
 
 module.exports = { 
@@ -99,5 +117,7 @@ module.exports = {
     deleteLockoutAttempts,
     updateLoginTime,
     createSession,
-    deleteSession
+    deleteSession,
+    updateUsername,
+    updateSessionUsername
 };
