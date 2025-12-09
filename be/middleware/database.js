@@ -125,6 +125,15 @@ function updateEmail(username, newEmail) {
     }
 }
 
+function updateNameColor(username, newColor) {
+    try {
+        const update = db.prepare('UPDATE users SET name_color = ? WHERE username = ?');
+        update.run(newColor, username);
+    } catch (error) {
+        console.error("Error updating name color:", error);
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -139,5 +148,6 @@ module.exports = {
     updateUsername,
     updateSessionUsername,
     updateDisplayName,
-    updateEmail
+    updateEmail,
+    updateNameColor
 };

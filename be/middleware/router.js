@@ -9,7 +9,8 @@ const {
     updateUsername,
     updateSessionUsername,
     updateDisplayName,
-    updateEmail
+    updateEmail,
+    updateNameColor
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -253,6 +254,22 @@ router.post("/profile/update-email", (req, res) => {
         res.redirect("/profile");
     } catch (error) {
         console.error("Error updating email:", error);
+        res.redirect("/profile?error=update_failed");
+    }
+});
+
+router.post("/profile/update-name-color", (req, res) => {
+    const username = req.session.username;
+    const newNameColor = req.body.name_color;
+
+    try {
+        // Update name color in database
+        updateNameColor(username, newNameColor);
+        
+        console.log(`Name color updated for ${username} to ${newNameColor}`);
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating name color:", error);
         res.redirect("/profile?error=update_failed");
     }
 });
