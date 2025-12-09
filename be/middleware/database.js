@@ -116,6 +116,15 @@ function updateDisplayName(username, newDisplayName) {
     }
 }
 
+function updateEmail(username, newEmail) {
+    try {
+        const update = db.prepare('UPDATE users SET email = ? WHERE username = ?');
+        update.run(newEmail, username);
+    } catch (error) {
+        console.error("Error updating email:", error);
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -129,5 +138,6 @@ module.exports = {
     deleteSession,
     updateUsername,
     updateSessionUsername,
-    updateDisplayName
+    updateDisplayName,
+    updateEmail
 };

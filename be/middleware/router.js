@@ -8,7 +8,8 @@ const {
     deleteSession,
     updateUsername,
     updateSessionUsername,
-    updateDisplayName
+    updateDisplayName,
+    updateEmail
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -236,6 +237,22 @@ router.post("/profile/update-display-name", (req, res) => {
         res.redirect("/profile");
     } catch (error) {
         console.error("Error updating display name:", error);
+        res.redirect("/profile?error=update_failed");
+    }
+});
+
+router.post("/profile/update-email", (req, res) => {
+    const username = req.session.username;
+    const newEmail = req.body.email;
+
+    try {
+        // Update email in database
+        updateEmail(username, newEmail);
+        
+        console.log(`Email updated for ${username} to ${newEmail}`);
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating email:", error);
         res.redirect("/profile?error=update_failed");
     }
 });
