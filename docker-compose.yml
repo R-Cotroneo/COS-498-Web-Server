@@ -4,6 +4,8 @@ services:
     build: ./be
     container_name: final-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=4610

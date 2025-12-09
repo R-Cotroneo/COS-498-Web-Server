@@ -137,6 +137,68 @@ function updateNameColor(username, newColor) {
     }
 }
 
+function updatePasswordHash(username, newHash) {
+    try {
+        const update = db.prepare('UPDATE users SET password_hash = ? WHERE username = ?');
+        update.run(newHash, username);
+    } catch (error) {
+        console.error("Error updating password hash:", error);
+    }
+}
+
+function getUserByEmail(email) {
+    try {
+        const getUser = db.prepare('SELECT * FROM users WHERE email = ?');
+        return getUser.get(email);
+    } catch (error) {
+        console.error("Error retrieving user by email:", error);
+        return null;
+    }
+}
+
+function createPasswordResetToken(email, token, expiration) {
+    try {
+        const insert = db.prepare('INSERT INTO password_reset (email, token, expires_at) VALUES (?, ?, ?)');
+        insert.run(email, token, expiration);
+    } catch (error) {
+        console.error("Error creating password reset token:", error);
+    }
+}
+
+function getPasswordResetToken(token) {
+    try {
+        const getToken = db.prepare('SELECT * FROM password_reset WHERE token = ?');
+        return getToken.get(token);
+    } catch (error) {
+        console.error("Error retrieving password reset token:", error);
+        return null;
+    }
+}
+
+function deletePasswordResetToken(token) {
+    try {
+        const deleteToken = db.prepare('DELETE FROM password_reset WHERE token = ?');
+        deleteToken.run(token);
+    } catch (error) {
+        console.error("Error deleting password reset token:", error);
+    }
+}
+
+function cleanupExpiredPasswordResetTokens() {
+    try {
+        const now = Date.now();
+        const deleteExpired = db.prepare('DELETE FROM password_reset WHERE expires_at < ?');
+        const result = deleteExpired.run(now);
+        if (result.changes > 0) {
+            console.log(`Cleaned up ${result.changes} expired password reset token(s)`);
+        }
+        return result.changes;
+    } catch (error) {
+        console.error("Error cleaning up expired password reset tokens:", error);
+        return 0;
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -152,5 +214,11 @@ module.exports = {
     updateSessionUsername,
     updateDisplayName,
     updateEmail,
-    updateNameColor
+    updateNameColor,
+    updatePasswordHash,
+    getUserByEmail,
+    createPasswordResetToken,
+    getPasswordResetToken,
+    deletePasswordResetToken,
+    cleanupExpiredPasswordResetTokens
 };

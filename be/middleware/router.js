@@ -10,7 +10,11 @@ const {
     updateSessionUsername,
     updateDisplayName,
     updateEmail,
-    updateNameColor
+    updateNameColor,
+    updatePasswordHash,
+    getUserByEmail,
+    deletePasswordResetToken,
+    cleanupExpiredPasswordResetTokens
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -21,6 +25,7 @@ const {
     verifyPassword,
 } = require('../middleware/pass-utils');
 const loginTracker = require('../middleware/loginTracker');
+const passwordResetEmail = require('../middleware/passwordResetEmail');
 
 // Home route
 router.get("/", (req, res) => {
@@ -194,6 +199,103 @@ router.post("/logout", (req, res) => {
         }
         res.redirect('/');
     });
+});
+
+// Reset Password route
+router.get("/reset-password-email", (req, res) => {
+    res.render("reset-password-email");
+});
+
+router.post("/reset-password-email", async (req, res) => {
+    const { email } = req.body;
+    
+    // Clean up expired tokens first
+    cleanupExpiredPasswordResetTokens();
+    
+    const user = getUserByEmail(email);
+    
+    if (!user) {
+        return res.render("reset-password-email", { error: "Email not found." });
+    }
+    
+    const token = passwordResetEmail.saveResetToken(email);
+    if (!token) {
+        return res.render("reset-password-email", { error: "Failed to generate reset token. Please try again." });
+    }
+    
+    const resetLink = `https://final.raistcotroneo.com/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    
+    try {
+        await passwordResetEmail.sendPasswordResetEmail(user.email, resetLink);
+        res.render("reset-password-email", { 
+            success: "Password reset email sent. Check your inbox and click the link to reset your password." 
+        });
+    } catch (error) {
+        console.error("Error sending reset email:", error);
+        res.render("reset-password-email", { error: "Failed to send reset email. Please try again." });
+    }
+});
+
+// GET route for reset password page (from email link)
+router.get("/reset-password", (req, res) => {
+    const { email, token } = req.query;
+    
+    if (!email || !token) {
+        return res.render("reset-password", { error: "Invalid reset link." });
+    }
+    
+    // Validate token
+    const tokenValidation = passwordResetEmail.validateResetToken(email, token);
+    if (!tokenValidation.isValid) {
+        return res.render("reset-password", { error: tokenValidation.error });
+    }
+    
+    // Show reset form with hidden fields for email and token
+    res.render("reset-password", { email, token });
+});
+
+router.post("/reset-password", async (req, res) => {
+    const { email, token, new_password } = req.body;
+    
+    if (!email || !token || !new_password) {
+        return res.render("reset-password", { error: "Missing required fields.", email, token });
+    }
+    
+    // Validate new password
+    const passValidation = validatePassword(new_password);
+    if (!passValidation.isValid) {
+        return res.render("reset-password", { 
+            error: passValidation.errors.join(' '),
+            email,
+            token
+        });
+    }
+    
+    try {
+        // Hash the new password
+        const newPasswordHash = await hashPassword(new_password);
+        
+        // Get user by email to get username
+        const user = getUserByEmail(email);
+        if (!user) {
+            return res.render("reset-password", { error: "User not found.", email, token });
+        }
+        
+        // Update user's password in database
+        updatePasswordHash(user.username, newPasswordHash);
+        
+        // Delete the used token from database
+        deletePasswordResetToken(token);
+        
+        console.log(`Password reset successfully for user: ${user.username}`);
+        res.render("login", { 
+            success: "Password reset successfully. You can now log in with your new password.",
+            username: user.username
+        });
+    } catch (error) {
+        console.error("Password reset error:", error);
+        res.render("reset-password", { error: "Failed to reset password. Please try again.", email, token });
+    }
 });
 
 // User Profile route

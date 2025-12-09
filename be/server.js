@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const hbs = require('hbs');
 const path = require('path');
+const { cleanupExpiredPasswordResetTokens } = require('./middleware/database');
 const app = express();
 const PORT = process.env.PORT || 4610;
 const router = require('./middleware/router');
@@ -39,4 +40,13 @@ app.use(router);
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on ${PORT}`);
+    
+    // Set up periodic cleanup of expired password reset tokens
+    // Run every 30 minutes (30 * 60 * 1000 milliseconds)
+    setInterval(() => {
+        cleanupExpiredPasswordResetTokens();
+    }, 30 * 60 * 1000);
+    
+    // Run initial cleanup on server start
+    cleanupExpiredPasswordResetTokens();
 });
