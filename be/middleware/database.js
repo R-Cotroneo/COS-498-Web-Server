@@ -4,6 +4,9 @@ const path = require('path');
 const dbPath = path.join(__dirname, '..', 'db', 'finalapp.db');
 const db = new Database(dbPath);
 
+// Enable foreign key constraints (required for CASCADE operations)
+db.pragma('foreign_keys = ON');
+
 function createUser(username, password_hash, email, display_name) {
     try {
         const insert = db.prepare('INSERT INTO users (username, password_hash, email, display_name) VALUES (?, ?, ?, ?)');
