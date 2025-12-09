@@ -17,6 +17,7 @@ const {
     validateEmail,
     validatePassword,
     validateDisplayName,
+    validateUsername,
     verifyPassword,
 } = require('../middleware/pass-utils');
 const loginTracker = require('../middleware/loginTracker');
@@ -201,7 +202,25 @@ router.get("/profile", (req, res) => {
         return res.redirect("/login");
     }
     const user = getUserByUsername(req.session.username);
-    res.render("profile", { user });
+    
+    // Handle error query parameter
+    let error = null;
+    if (req.query.error) {
+        switch (req.query.error) {
+            case 'username_taken':
+                error = "Username is already taken.";
+                break;
+            case 'update_failed':
+                error = "Update failed. Please try again.";
+                break;
+            default:
+                // For URL-encoded error messages from validation
+                error = decodeURIComponent(req.query.error);
+                break;
+        }
+    }
+    
+    res.render("profile", { user, error });
 });
 
 router.post("/profile/update-username", (req, res) => {
@@ -209,6 +228,12 @@ router.post("/profile/update-username", (req, res) => {
     const newUsername = req.body.username; // Fixed: changed from new_username to username
     
     try {
+        // Validate new username with current username for duplicate checking
+        const usernameValidation = validateUsername(newUsername, oldUsername);
+        if (!usernameValidation.isValid) {
+            return res.redirect(`/profile?error=${encodeURIComponent(usernameValidation.error)}`);
+        }
+
         // Update username in database
         updateUsername(oldUsername, newUsername);
         
@@ -231,6 +256,15 @@ router.post("/profile/update-display-name", (req, res) => {
     const newDisplayName = req.body.display_name;
 
     try {
+        // Get current user data to pass current display name for validation
+        const user = getUserByUsername(username);
+        
+        // Validate new display name
+        const displayNameValidation = validateDisplayName(newDisplayName, username, user.display_name);
+        if (!displayNameValidation.isValid) {
+            return res.redirect(`/profile?error=${encodeURIComponent(displayNameValidation.error)}`);
+        }
+        
         // Update display name in database
         updateDisplayName(username, newDisplayName);
         
@@ -247,6 +281,15 @@ router.post("/profile/update-email", (req, res) => {
     const newEmail = req.body.email;
 
     try {
+        // Get current user data to pass current email for validation
+        const user = getUserByUsername(username);
+        
+        // Validate new email
+        const emailValidation = validateEmail(newEmail, user.email);
+        if (!emailValidation.isValid) {
+            return res.redirect(`/profile?error=${encodeURIComponent(emailValidation.error)}`);
+        }
+
         // Update email in database
         updateEmail(username, newEmail);
         
