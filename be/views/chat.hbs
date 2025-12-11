@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room - {{title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Chat-specific styles */
+        .chat-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .chat-status {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        #chatArea {
+            height: 400px;
+            width: 100%;
+            border: 1px solid #ddd;
+            overflow-y: scroll;
+            padding: 1rem;
+            background-color: #fafafa;
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: white;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .message-content {
+            margin-left: 0;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .chat-input-container {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-top: 1px solid #ddd;
+        }
+
+        #messageForm {
+            display: flex;
+            gap: 1rem;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .chat-actions {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .char-counter {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .char-counter.warning {
+            color: #e67e22;
+        }
+
+        .char-counter.danger {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    {{> header}}
+
+    <main>
+        <h1>Chat Room</h1>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>Welcome, {{user.display_name}}!</h2>
+                <p>Connect with other community members in real-time</p>
+            </div>
+
+            <div style="padding: 1rem;">
+                <div id="status" class="chat-status status-disconnected">Not connected</div>
+                
+                <div class="chat-actions">
+                    <button id="connectBtn" class="btn">Connect to Chat</button>
+                </div>
+
+                <div id="chatArea"></div>
+                
+                <div class="chat-input-container" style="display: none;" id="inputContainer">
+                    <form id="messageForm">
+                        <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500" required>
+                        <button type="submit" id="sendBtn" class="btn">Send</button>
+                    </form>
+                    <div class="char-counter" id="charCounter">0/500</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {{> footer}}
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let connected = false;
+        
+        // Elements used for chat functionality
+        const statusDiv = document.getElementById('status');
+        const chatArea = document.getElementById('chatArea');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const connectBtn = document.getElementById('connectBtn');
+        const inputContainer = document.getElementById('inputContainer');
+        const charCounter = document.getElementById('charCounter');
+        
+        // Updates the connection status display
+        function updateStatus(message, status) {
+            statusDiv.textContent = message;
+            statusDiv.className = `chat-status status-${status}`;
+            connected = status === 'connected';
+            
+            if (connected) {
+                inputContainer.style.display = 'block';
+                connectBtn.style.display = 'none';
+            } else {
+                inputContainer.style.display = 'none';
+                connectBtn.style.display = 'inline-block';
+            }
+        }
+        
+        // Updates character counter to account for message length
+        function updateCharCounter() {
+            const length = messageInput.value.length;
+            charCounter.textContent = `${length}/500`;
+            
+            if (length > 450) {
+                // Displays char counter as red
+                charCounter.className = 'char-counter danger';
+            } else if (length > 400) {
+                // Displays char counter as orange
+                charCounter.className = 'char-counter warning';
+            } else {
+                // Displays normal char counter (grey)
+                charCounter.className = 'char-counter';
+            }
+        }
+        
+        // Accounting for different timestamp formats
+        function formatTime(timestamp) {
+            // Handle different timestamp formats consistently
+            let date;
+            if (typeof timestamp === 'string') {
+                // Database timestamps are in UTC format
+                if (timestamp.includes('T')) {
+                    // ISO string format
+                    date = new Date(timestamp);
+                } else {
+                    // SQLite timestamp format, treat as UTC
+                    date = new Date(timestamp + ' UTC');
+                }
+            } else {
+                date = new Date(timestamp);
+            }
+            
+            return date.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: 'numeric', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Creates and appends a new message to the chat area
+        function addMessage(data) {
+            const time = data.created_at ? formatTime(data.created_at) : formatTime(new Date());
+            const displayName = data.display_name || data.userName;
+            const nameColor = data.name_color || '#000000';
+            
+            // Creating the full message div
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            // Creating the message header div
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            
+            // Name plate with display name and user's color
+            const nameSpan = document.createElement('span');
+            nameSpan.style.color = nameColor;
+            nameSpan.textContent = displayName;
+            
+            // Time stamp
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = time;
+            
+            // Assemble header of the message
+            headerDiv.appendChild(nameSpan);
+            headerDiv.appendChild(timeSpan);
+            
+            // Message content
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = data.message;
+            
+            // Assemble the full message
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            // Put messages in the chat area
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        // Connect to Socket.IO with credentials
+        connectBtn.addEventListener('click', () => {
+            updateStatus('Connecting...', 'connecting');
+            
+            socket = io('https://final.raistcotroneo.com', {
+                withCredentials: true
+            });
+            
+            socket.on('connect', () => {
+                updateStatus('Connected to chat!', 'connected');
+            });
+            
+            socket.on('disconnect', () => {
+                updateStatus('Disconnected from chat', 'disconnected');
+            });
+            
+            socket.on('error', (error) => {
+                updateStatus('Error: ' + error.message, 'disconnected');
+            });
+            
+            socket.on('chatMessage', (data) => {
+                addMessage(data);
+            });
+        });
+        
+        // Character counter
+        messageInput.addEventListener('input', updateCharCounter);
+        
+        // Send message form
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (!connected || !socket) {
+                alert('Not connected to chat!');
+                return;
+            }
+            
+            const message = messageInput.value.trim();
+            if (message && message.length > 0) {
+                socket.emit('sendMessage', { message });
+                messageInput.value = '';
+                updateCharCounter();
+            }
+        });
+        
+        // Enter key to send message
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // Initialize character counter
+        updateCharCounter();
+    </script>
+</body>
+</html>

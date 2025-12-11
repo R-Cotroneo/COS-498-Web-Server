@@ -419,6 +419,14 @@ router.post("/profile/update-name-color", (req, res) => {
     }
 });
 
+// Socket Chat route
+router.get("/chat", (req, res) => {
+    if (!req.session || !req.session.isLoggedIn) {
+        return res.redirect("/login");
+    }
+    res.render("chat", { display_name: req.session.display_name });
+});
+
 // Comments route
 router.get("/comments", (req, res) => {
     res.render("comments");

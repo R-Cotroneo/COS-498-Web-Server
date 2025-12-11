@@ -199,6 +199,33 @@ function cleanupExpiredPasswordResetTokens() {
     }
 }
 
+function saveChatMessage(username, display_name, message, name_color) {
+    try {
+        const insert = db.prepare('INSERT INTO chat_messages (username, display_name, message, name_color) VALUES (?, ?, ?, ?)');
+        const result = insert.run(username, display_name, message, name_color);
+        return result.lastInsertRowid;
+    } catch (error) {
+        console.error("Error saving chat message:", error);
+        return null;
+    }
+}
+
+function getChatMessages(limit = 50) {
+    try {
+        const getMessages = db.prepare(`
+            SELECT username, display_name, message, name_color, created_at 
+            FROM chat_messages 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        `);
+        const messages = getMessages.all(limit);
+        return messages.reverse(); // Return in chronological order
+    } catch (error) {
+        console.error("Error retrieving chat messages:", error);
+        return [];
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -220,5 +247,7 @@ module.exports = {
     createPasswordResetToken,
     getPasswordResetToken,
     deletePasswordResetToken,
-    cleanupExpiredPasswordResetTokens
+    cleanupExpiredPasswordResetTokens,
+    saveChatMessage,
+    getChatMessages
 };
