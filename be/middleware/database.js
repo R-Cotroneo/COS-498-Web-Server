@@ -226,6 +226,45 @@ function getChatMessages(limit = 50) {
     }
 }
 
+function createComment(author, text, createdAt) {
+    try {
+        const insert = db.prepare('INSERT INTO comments (author, comment) VALUES (?, ?)');
+        const result = insert.run(author, text);
+        console.log(`Comment created successfully with ID: ${result.lastInsertRowid}`);
+        return result.lastInsertRowid;
+    } catch (error) {
+        console.error("Error creating comment:", error);
+        return null;
+    }
+}
+
+function getCommentsWithPagination(limit = 10, offset = 0) {
+    try {
+        const getComments = db.prepare(`
+            SELECT c.id, c.author, c.comment as text, c.created_at as createdAt,
+                   u.display_name, u.name_color
+            FROM comments c
+            LEFT JOIN users u ON c.author = u.username
+            ORDER BY c.created_at DESC 
+            LIMIT ? OFFSET ?
+        `);
+        return getComments.all(limit, offset);
+    } catch (error) {
+        console.error("Error retrieving comments:", error);
+        return [];
+    }
+}
+
+function getTotalCommentsCount() {
+    try {
+        const result = db.prepare('SELECT COUNT(*) as count FROM comments').get();
+        return result.count;
+    } catch (error) {
+        console.error("Error counting comments:", error);
+        return 0;
+    }
+}
+
 module.exports = { 
     createUser,
     getUserByUsername,
@@ -249,5 +288,8 @@ module.exports = {
     deletePasswordResetToken,
     cleanupExpiredPasswordResetTokens,
     saveChatMessage,
-    getChatMessages
+    getChatMessages,
+    createComment,
+    getCommentsWithPagination,
+    getTotalCommentsCount
 };

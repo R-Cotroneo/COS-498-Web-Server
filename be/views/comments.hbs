@@ -25,7 +25,9 @@
             {{#each comments}}
             <div class="comment-item">
                 <div class="comment-header">
-                    <span class="comment-author">{{this.author}}</span>
+                    <span class="comment-author" {{#if this.name_color}}style="color: {{this.name_color}};"{{/if}}>
+                        {{#if this.display_name}}{{this.display_name}}{{else}}{{this.author}}{{/if}}
+                    </span>
                     <span class="comment-date">{{this.createdAt}}</span>
                 </div>
                 <div class="comment-content">
@@ -34,6 +36,49 @@
             </div>
             {{/each}}
         </div>
+
+        {{#if pagination}}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                <span>Showing {{pagination.limit}} of {{pagination.totalComments}} posts</span>
+            </div>
+            
+            <div class="pagination-controls" id="paginationControls">
+                {{#if pagination.hasPrev}}
+                    <form method="POST" action="/comments/page" style="display: inline;">
+                        <input type="hidden" name="page" value="{{pagination.prevPage}}">
+                        <input type="hidden" name="limit" value="{{pagination.limit}}">
+                        <button type="submit" class="btn btn-secondary pagination-btn">&laquo; Previous</button>
+                    </form>
+                {{/if}}
+                
+                <span class="pagination-current">
+                    Page {{pagination.currentPage}} of {{pagination.totalPages}}
+                </span>
+                
+                {{#if pagination.hasNext}}
+                    <form method="POST" action="/comments/page" style="display: inline;">
+                        <input type="hidden" name="page" value="{{pagination.nextPage}}">
+                        <input type="hidden" name="limit" value="{{pagination.limit}}">
+                        <button type="submit" class="btn btn-secondary pagination-btn">Next &raquo;</button>
+                    </form>
+                {{/if}}
+            </div>
+            
+            <div class="pagination-jump">
+                <form method="POST" action="/comments/jump" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <label for="jumpPage">Jump to page:</label>
+                    <select name="jumpPage" id="jumpPage" class="pagination-select">
+                        {{#each pagination.pageOptions}}
+                            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.value}}</option>
+                        {{/each}}
+                    </select>
+                    <input type="hidden" name="limit" value="{{pagination.limit}}">
+                    <button type="submit" class="btn btn-secondary">Go</button>
+                </form>
+            </div>
+        </div>
+        {{/if}}
 
         {{else}}
         <div class="comments-container">

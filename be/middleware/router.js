@@ -14,7 +14,10 @@ const {
     updatePasswordHash,
     getUserByEmail,
     deletePasswordResetToken,
-    cleanupExpiredPasswordResetTokens
+    cleanupExpiredPasswordResetTokens,
+    createComment,
+    getCommentsWithPagination,
+    getTotalCommentsCount
 } = require('../middleware/database');
 const { 
     hashPassword,
@@ -370,6 +373,9 @@ router.post("/profile/update-display-name", (req, res) => {
         // Update display name in database
         updateDisplayName(username, newDisplayName);
         
+        // Update session display name to reflect changes immediately
+        req.session.display_name = newDisplayName;
+        
         console.log(`Display name updated for ${username} to ${newDisplayName}`);
         res.redirect("/profile");
     } catch (error) {
@@ -429,12 +435,71 @@ router.get("/chat", (req, res) => {
 
 // Comments route
 router.get("/comments", (req, res) => {
-    res.render("comments");
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    
+    const comments = getCommentsWithPagination(limit, offset);
+    const totalComments = getTotalCommentsCount();
+    const totalPages = Math.ceil(totalComments / limit);
+    
+    // Generate page range for dropdown
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+        pages.push({
+            value: i,
+            selected: i === page
+        });
+    }
+    
+    res.render("comments", {
+        comments: comments,
+        pagination: {
+            currentPage: page,
+            totalPages: totalPages,
+            totalComments: totalComments,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+            nextPage: page + 1,
+            prevPage: page - 1,
+            limit: limit,
+            pageOptions: pages
+        }
+    });
 });
 
 // New Comment route
 router.get("/comment/new", (req, res) => {
     res.render("new-comment");
+});
+
+router.post('/comment', (req, res) => {
+    if (!req.session || !req.session.isLoggedIn) {
+        return res.status(401).render('login', {
+            title: 'Login',
+            error: 'You must be logged in to post a comment.'
+        });
+    }
+    const author = req.session.username;
+    const text = req.body.text;
+    const createdAt = new Date();
+    createComment(author, text, createdAt);
+    // comments.push({ author, text, createdAt });
+    res.redirect('/comments');
+});
+
+// Pagination route
+router.post('/comments/page', (req, res) => {
+    const page = parseInt(req.body.page) || 1;
+    const limit = parseInt(req.body.limit) || 10;
+    res.redirect(`/comments?page=${page}&limit=${limit}`);
+});
+
+// Jump-to-page router
+router.post('/comments/jump', (req, res) => {
+    const page = parseInt(req.body.jumpPage) || 1;
+    const limit = parseInt(req.body.limit) || 10;
+    res.redirect(`/comments?page=${page}&limit=${limit}`);
 });
 
 module.exports = router;
