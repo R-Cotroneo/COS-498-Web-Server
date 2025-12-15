@@ -1,3 +1,9 @@
+/*
+This module tracks login attempts to prevent brute-force attacks.
+It records attempts, checks for lockouts, and cleans up old attempts.
+Mostly relies on database.js.
+*/
+
 const { createLoginAttempts, getLockoutInfo, deleteLockoutAttempts } = require('../middleware/database');
 
 // Configuration
@@ -16,6 +22,7 @@ function checkLockout(ipAddress, username) {
     const cutoffTime = Date.now() - LOCKOUT_DURATION;
     const result = getLockoutInfo(ipAddress, username, cutoffTime);
 
+    // If attempts exceed max, user is locked out
     if (result.count >= MAX_ATTEMPTS) {
         // Calculate remaining lockout time
         const lastAttempt = new Date(result.last_attempt).getTime();
@@ -40,6 +47,7 @@ function checkLockout(ipAddress, username) {
     Clears old login attempts (cleanup function)
     Removes attempts older than the lockout duration
 */
+// Returns number of deleted records
 function cleanupOldAttempts() {
     const cutoffTime = Date.now() - LOCKOUT_DURATION;
     const result = deleteLockoutAttempts(cutoffTime);

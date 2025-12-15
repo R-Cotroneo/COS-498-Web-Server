@@ -1,32 +1,13 @@
+/*
+This is the big one.
+The main router that handles all routes for the web server.
+It uses Express.js and connects various middleware and database functions.
+*/
+
 const express = require('express');
 const router = express.Router();
-const { 
-    createUser, 
-    getUserByUsername, 
-    updateLoginTime,
-    createSession,
-    deleteSession,
-    updateUsername,
-    updateSessionUsername,
-    updateDisplayName,
-    updateEmail,
-    updateNameColor,
-    updatePasswordHash,
-    getUserByEmail,
-    deletePasswordResetToken,
-    cleanupExpiredPasswordResetTokens,
-    createComment,
-    getCommentsWithPagination,
-    getTotalCommentsCount
-} = require('../middleware/database');
-const { 
-    hashPassword,
-    validateEmail,
-    validatePassword,
-    validateDisplayName,
-    validateUsername,
-    verifyPassword,
-} = require('../middleware/pass-utils');
+const database = require('../middleware/database');
+const passUtils = require('../middleware/pass-utils');
 const { renderMarkdown } = require('../middleware/markdown');
 const loginTracker = require('../middleware/loginTracker');
 const passwordResetEmail = require('../middleware/passwordResetEmail');
@@ -36,14 +17,16 @@ router.get("/", (req, res) => {
     res.render("home");
 });
 
-// Register route
+/* Region: Register Routes */
+// Registration page route
 router.get("/register", (req, res) => {
     res.render("register");
 });
 
+// Registration form submission route
 router.post("/register", async (req, res) => {
     const { username, password, email, display_name } = req.body;
-    const inDataUser = getUserByUsername(username);
+    const inDataUser = database.getUserByUsername(username);
     
     if (username === inDataUser?.username) {
         return res.render("register", { 
@@ -55,7 +38,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Validate password
-    const passValidation = validatePassword(password);
+    const passValidation = passUtils.validatePassword(password);
     if (!passValidation.isValid) {
         return res.render("register", { 
             error: passValidation.errors.join(' '), 
@@ -67,7 +50,7 @@ router.post("/register", async (req, res) => {
     
     // This might not be necessary due to html having a built-in email verifier
     // We'll call this extra security
-    const emailValidation = validateEmail(email);
+    const emailValidation = passUtils.validateEmail(email);
     if (!emailValidation.isValid) {
         return res.render("register", { 
             error: emailValidation.error, 
@@ -78,7 +61,7 @@ router.post("/register", async (req, res) => {
     }
     
     // Validate display name
-    const displayNameValidation = validateDisplayName(display_name, username);
+    const displayNameValidation = passUtils.validateDisplayName(display_name, username);
     if (!displayNameValidation.isValid) {
         return res.render("register", { 
             error: displayNameValidation.error, 
@@ -90,17 +73,19 @@ router.post("/register", async (req, res) => {
     
     try {
         // Hash the password
-        const password_hash = await hashPassword(password);
+        const password_hash = await passUtils.hashPassword(password);
         
         // Create user with hashed password
-        createUser(username, password_hash, email, display_name);
+        database.createUser(username, password_hash, email, display_name);
         res.redirect("/login");
     } catch (error) {
         console.error("Registration error:", error);
     }
 });
+/* End Region: Register Routes */
 
-// Login route
+/* Region: Login/Logout Routes */
+// Login page route
 router.get("/login", (req, res) => {
     const clientIP = loginTracker.getClientIP(req);
     const username = req.query.username || '';
@@ -114,6 +99,7 @@ router.get("/login", (req, res) => {
     res.render("login", { username, attemptStatus });
 });
 
+// Login form submission route
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     const clientIP = loginTracker.getClientIP(req);
@@ -130,8 +116,9 @@ router.post("/login", async (req, res) => {
         });
     }
 
+    // Login validation
     try {
-        const user = getUserByUsername(username);
+        const user = database.getUserByUsername(username);
         
         if (!user) {
             // Record failed attempt for invalid username
@@ -144,14 +131,14 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        const isValidPassword = await verifyPassword(user.password_hash, password);
+        const isValidPassword = await passUtils.verifyPassword(user.password_hash, password);
         
         // Always record the login attempt
         loginTracker.recordAttempt(clientIP, username, isValidPassword);
         
         if (isValidPassword) {
             // Update user's last login time
-            updateLoginTime(user.id);
+            database.updateLoginTime(user.id);
             
             // Set session
             req.session.username = username;
@@ -160,7 +147,7 @@ router.post("/login", async (req, res) => {
             req.session.isLoggedIn = true;
             
             // Create session in database
-            createSession({
+            database.createSession({
                 sessionId: req.sessionID,
                 username: username
             });
@@ -194,7 +181,7 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (req, res) => {
     // Delete session from database
     if (req.sessionID) {
-        deleteSession(req.sessionID);
+        database.deleteSession(req.sessionID);
     }
     
     req.session.destroy((err) => {
@@ -204,31 +191,37 @@ router.post("/logout", (req, res) => {
         res.redirect('/');
     });
 });
+/* End Region: Login/Logout Routes */
 
+/* Region: Reset Password Routes */
 // Reset Password route
 router.get("/reset-password-email", (req, res) => {
     res.render("reset-password-email");
 });
 
+// Handle reset password email submission
 router.post("/reset-password-email", async (req, res) => {
     const { email } = req.body;
     
     // Clean up expired tokens first
-    cleanupExpiredPasswordResetTokens();
+    database.cleanupExpiredPasswordResetTokens();
     
-    const user = getUserByEmail(email);
+    const user = database.getUserByEmail(email);
     
     if (!user) {
         return res.render("reset-password-email", { error: "Email not found." });
     }
     
+    // Generate and save reset token
     const token = passwordResetEmail.saveResetToken(email);
     if (!token) {
         return res.render("reset-password-email", { error: "Failed to generate reset token. Please try again." });
     }
     
+    // Creates the reset link
     const resetLink = `https://final.raistcotroneo.com/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
     
+    // Send the reset email
     try {
         await passwordResetEmail.sendPasswordResetEmail(user.email, resetLink);
         res.render("reset-password-email", { 
@@ -266,7 +259,7 @@ router.post("/reset-password", async (req, res) => {
     }
     
     // Validate new password
-    const passValidation = validatePassword(new_password);
+    const passValidation = passUtils.validatePassword(new_password);
     if (!passValidation.isValid) {
         return res.render("reset-password", { 
             error: passValidation.errors.join(' '),
@@ -275,21 +268,22 @@ router.post("/reset-password", async (req, res) => {
         });
     }
     
+    // Update password in the database (including the hash)
     try {
         // Hash the new password
-        const newPasswordHash = await hashPassword(new_password);
+        const newPasswordHash = await passUtils.hashPassword(new_password);
         
         // Get user by email to get username
-        const user = getUserByEmail(email);
+        const user = database.getUserByEmail(email);
         if (!user) {
             return res.render("reset-password", { error: "User not found.", email, token });
         }
         
         // Update user's password in database
-        updatePasswordHash(user.username, newPasswordHash);
+        database.updatePasswordHash(user.username, newPasswordHash);
         
         // Delete the used token from database
-        deletePasswordResetToken(token);
+        database.deletePasswordResetToken(token);
         
         console.log(`Password reset successfully for user: ${user.username}`);
         res.render("login", { 
@@ -301,13 +295,15 @@ router.post("/reset-password", async (req, res) => {
         res.render("reset-password", { error: "Failed to reset password. Please try again.", email, token });
     }
 });
+/* End Region: Reset Password Routes */
 
-// User Profile route
+/* Region: User Profile Routes */
+// User Profile page route
 router.get("/profile", (req, res) => {
     if (!req.session || !req.session.isLoggedIn) {
         return res.redirect("/login");
     }
-    const user = getUserByUsername(req.session.username);
+    const user = database.getUserByUsername(req.session.username);
     
     // Handle error query parameter
     let error = null;
@@ -329,22 +325,23 @@ router.get("/profile", (req, res) => {
     res.render("profile", { user, error });
 });
 
+// Update Username route
 router.post("/profile/update-username", (req, res) => {
     const oldUsername = req.session.username;
     const newUsername = req.body.username; // Fixed: changed from new_username to username
     
     try {
         // Validate new username with current username for duplicate checking
-        const usernameValidation = validateUsername(newUsername, oldUsername);
+        const usernameValidation = passUtils.validateUsername(newUsername, oldUsername);
         if (!usernameValidation.isValid) {
             return res.redirect(`/profile?error=${encodeURIComponent(usernameValidation.error)}`);
         }
 
         // Update username in database
-        updateUsername(oldUsername, newUsername);
+        database.updateUsername(oldUsername, newUsername);
         
         // Update session in database
-        updateSessionUsername(req.sessionID, newUsername);
+        database.updateSessionUsername(req.sessionID, newUsername);
         
         // Update session username in memory
         req.session.username = newUsername;
@@ -357,22 +354,23 @@ router.post("/profile/update-username", (req, res) => {
     }
 });
 
+// Update Display Name route
 router.post("/profile/update-display-name", (req, res) => {
     const username = req.session.username;
     const newDisplayName = req.body.display_name;
 
     try {
         // Get current user data to pass current display name for validation
-        const user = getUserByUsername(username);
+        const user = database.getUserByUsername(username);
         
         // Validate new display name
-        const displayNameValidation = validateDisplayName(newDisplayName, username, user.display_name);
+        const displayNameValidation = passUtils.validateDisplayName(newDisplayName, username, user.display_name);
         if (!displayNameValidation.isValid) {
             return res.redirect(`/profile?error=${encodeURIComponent(displayNameValidation.error)}`);
         }
         
         // Update display name in database
-        updateDisplayName(username, newDisplayName);
+        database.updateDisplayName(username, newDisplayName);
         
         // Update session display name to reflect changes immediately
         req.session.display_name = newDisplayName;
@@ -385,22 +383,23 @@ router.post("/profile/update-display-name", (req, res) => {
     }
 });
 
+// Update Email route
 router.post("/profile/update-email", (req, res) => {
     const username = req.session.username;
     const newEmail = req.body.email;
 
     try {
         // Get current user data to pass current email for validation
-        const user = getUserByUsername(username);
+        const user = database.getUserByUsername(username);
         
         // Validate new email
-        const emailValidation = validateEmail(newEmail, user.email);
+        const emailValidation = passUtils.validateEmail(newEmail, user.email);
         if (!emailValidation.isValid) {
             return res.redirect(`/profile?error=${encodeURIComponent(emailValidation.error)}`);
         }
 
         // Update email in database
-        updateEmail(username, newEmail);
+        database.updateEmail(username, newEmail);
         
         console.log(`Email updated for ${username} to ${newEmail}`);
         res.redirect("/profile");
@@ -410,13 +409,14 @@ router.post("/profile/update-email", (req, res) => {
     }
 });
 
+// Update Name Color route
 router.post("/profile/update-name-color", (req, res) => {
     const username = req.session.username;
     const newNameColor = req.body.name_color;
 
     try {
         // Update name color in database
-        updateNameColor(username, newNameColor);
+        database.updateNameColor(username, newNameColor);
         
         console.log(`Name color updated for ${username} to ${newNameColor}`);
         res.redirect("/profile");
@@ -425,23 +425,17 @@ router.post("/profile/update-name-color", (req, res) => {
         res.redirect("/profile?error=update_failed");
     }
 });
+/* End Region: User Profile Routes */
 
-// Socket Chat route
-router.get("/chat", (req, res) => {
-    if (!req.session || !req.session.isLoggedIn) {
-        return res.redirect("/login");
-    }
-    res.render("chat", { display_name: req.session.display_name });
-});
-
+/* Region: Comments Routes */
 // Comments route
 router.get("/comments", (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     
-    const comments = getCommentsWithPagination(limit, offset);
-    const totalComments = getTotalCommentsCount();
+    const comments = database.getCommentsWithPagination(limit, offset);
+    const totalComments = database.getTotalCommentsCount();
     const totalPages = Math.ceil(totalComments / limit);
     
     // Generate page range for dropdown
@@ -474,6 +468,7 @@ router.get("/comment/new", (req, res) => {
     res.render("new-comment");
 });
 
+// Handle new comment submission
 router.post('/comment', (req, res) => {
     if (!req.session || !req.session.isLoggedIn) {
         return res.status(401).render('login', {
@@ -488,7 +483,7 @@ router.post('/comment', (req, res) => {
     const renderedHtml = renderMarkdown(text);
     
     const createdAt = new Date();
-    createComment(author, text, renderedHtml, createdAt);
+    database.createComment(author, text, renderedHtml, createdAt);
     res.redirect('/comments');
 });
 
@@ -504,6 +499,15 @@ router.post('/comments/jump', (req, res) => {
     const page = parseInt(req.body.jumpPage) || 1;
     const limit = parseInt(req.body.limit) || 10;
     res.redirect(`/comments?page=${page}&limit=${limit}`);
+});
+/* End Region: Comments Routes */
+
+// Socket Chat page route
+router.get("/chat", (req, res) => {
+    if (!req.session || !req.session.isLoggedIn) {
+        return res.redirect("/login");
+    }
+    res.render("chat", { display_name: req.session.display_name });
 });
 
 module.exports = router;

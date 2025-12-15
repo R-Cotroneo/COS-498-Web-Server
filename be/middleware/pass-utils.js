@@ -1,6 +1,13 @@
+/*
+This module provides utilities for password handling and validation.
+It includes functions for validating usernames, emails, display names, and passwords.
+It also provides functions for hashing and verifying passwords using Argon2.
+*/
+
 const argon2 = require('argon2');
 const { getUserCountByEmail, getUserCountByDisplayName, getUserByUsername } = require('../middleware/database');
 
+// Argon2 configuration
 const argon2Options = {
     type: argon2.argon2id,
     memoryCost: 65536,
@@ -8,6 +15,7 @@ const argon2Options = {
     parallelism: 4
 };
 
+// Validates username rules
 function validateUsername(username, currentUsername = null) {
     // Check if username is empty or just whitespace
     if (!username || username.trim().length === 0) {
@@ -63,6 +71,8 @@ function validateUsername(username, currentUsername = null) {
     };
 }
 
+// Validate email format and uniqueness
+// Note: These functions might not be necessary due to the html form already doing validation on email inputs
 function validateEmail(email, currentEmail = null) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -93,6 +103,7 @@ function validateEmail(email, currentEmail = null) {
     };
 }
 
+// Validate display name rules
 function validateDisplayName(display_name, username, currentDisplayName = null) {
     // Check if display name is the same as username
     if (display_name === username) {
@@ -117,7 +128,6 @@ function validateDisplayName(display_name, username, currentDisplayName = null) 
             error: "Display name must be at least 2 characters long."
         };
     }
-    
     if (display_name.length > 50) {
         return {
             isValid: false,
@@ -148,6 +158,7 @@ function validateDisplayName(display_name, username, currentDisplayName = null) 
     };
 }
 
+// Validate password strength
 function validatePassword(password) {
     const errors = [];
 
@@ -178,6 +189,7 @@ function validatePassword(password) {
     };
 }
 
+// Hashes a password using Argon2
 async function hashPassword(password) {
     try {
         const hash = await argon2.hash(password, argon2Options);
@@ -187,6 +199,7 @@ async function hashPassword(password) {
     }
 }
 
+// Verifies a password against a given hash
 async function verifyPassword(hash, password) {
     try {
         return await argon2.verify(hash, password);

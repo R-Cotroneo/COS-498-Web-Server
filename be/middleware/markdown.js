@@ -1,3 +1,9 @@
+/*
+Middleware for rendering and sanitizing Markdown content.
+Uses 'marked' for Markdown parsing and 'DOMPurify' for sanitization.
+
+*/
+
 const { marked } = require('marked');
 const createDOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
@@ -33,8 +39,10 @@ const purifyConfig = {
     FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'style']
 };
 
+// Renders markdown to sanitized HTML
 function renderMarkdown(markdown) {
     try {
+        // Input validation
         if (!markdown || typeof markdown !== 'string') {
             return '';
         }
@@ -58,6 +66,7 @@ function escapeHtml(text) {
         return '';
     }
     
+    // Reg Exs for escaping (g - global: all occurrences of the character)
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -66,6 +75,7 @@ function escapeHtml(text) {
         .replace(/'/g, '&#x27;');
 }
 
+// Cleanup the markdown
 function stripMarkdown(markdown) {
     try {
         if (!markdown || typeof markdown !== 'string') {

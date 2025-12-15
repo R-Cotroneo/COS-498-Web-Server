@@ -1,9 +1,15 @@
+/*
+    Main server file for the web application.
+    Sets up Express server, session management, Handlebars templating,
+    and Socket.io for real-time chat functionality.
+    Routes are handled in router.js, and database interactions are managed in database.js.
+*/
 const express = require('express');
 const session = require('express-session');
 const hbs = require('hbs');
 const path = require('path');
 const http = require('http');
-const { cleanupExpiredPasswordResetTokens, saveChatMessage, getChatMessages, getUserByUsername } = require('./middleware/database');
+const { cleanupExpiredPasswordResetTokens, saveChatMessage, getUserByUsername } = require('./middleware/database');
 const app = express();
 const PORT = process.env.PORT || 4610;
 const router = require('./middleware/router');
@@ -22,6 +28,7 @@ const sesMiddle = session({
 });
 app.use(sesMiddle);
 
+// Set up Handlebars as the view engine
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 hbs.registerPartials(path.join(__dirname, 'views', 'partials'));
@@ -42,7 +49,7 @@ app.use((req, res, next) => {
 
 app.use(router);
 
-// setup io socket, same as last chapter
+// setup io socket
 const io = new Server(server, {
     cors: {
         origin: "*",

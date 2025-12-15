@@ -1,3 +1,4 @@
+<!-- Comments Page -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,6 +21,7 @@
             {{/if}}
         </div>
 
+        <!-- Comments List -->
         {{#if comments}}
         <div class="comments-container">
             {{#each comments}}
@@ -41,6 +43,7 @@
             {{/each}}
         </div>
 
+        <!-- Pagination Controls -->
         {{#if pagination}}
         <div class="pagination-container">
             <div class="pagination-info">
@@ -84,6 +87,7 @@
         </div>
         {{/if}}
 
+        <!-- No Comments Message -->
         {{else}}
         <div class="comments-container">
             <div class="comment-item text-center">

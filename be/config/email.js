@@ -1,5 +1,11 @@
+/*
+This module sets up email sending functionality using Nodemailer.
+It configures a transporter with Gmail service and provides a function to send emails.
+*/
+
 const nodemailer = require('nodemailer');
 
+// Create a transporter object using Gmail service
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -8,6 +14,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Sends an email
 async function sendEmail(to, subject, text) {
     try {
         const info = await transporter.sendMail({

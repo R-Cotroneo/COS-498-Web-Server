@@ -1,3 +1,4 @@
+<!-- New Comment Page -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,12 +13,14 @@
     <main>
         <h1>Create New Post</h1>
 
+        <!-- Not Logged In Message -->
         {{#unless user}}
         <div class="alert alert-info">
             You must be <a href="/login">logged in</a> to create a new post.
         </div>
         {{/unless}}
 
+        <!-- New Comment Form -->
         {{#if user}}
         <div class="form-container">
             <form action="/comment" method="POST">
@@ -34,6 +37,7 @@
             </form>
         </div>
 
+        <!-- Chat GPT provided posting guidelines -->
         <div class="text-center mt-3">
             <small style="color: #666;">
                 <strong>Posting Guidelines:</strong>
