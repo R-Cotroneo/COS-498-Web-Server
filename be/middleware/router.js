@@ -27,6 +27,7 @@ const {
     validateUsername,
     verifyPassword,
 } = require('../middleware/pass-utils');
+const { renderMarkdown } = require('../middleware/markdown');
 const loginTracker = require('../middleware/loginTracker');
 const passwordResetEmail = require('../middleware/passwordResetEmail');
 
@@ -482,9 +483,12 @@ router.post('/comment', (req, res) => {
     }
     const author = req.session.username;
     const text = req.body.text;
+    
+    // Render markdown to HTML
+    const renderedHtml = renderMarkdown(text);
+    
     const createdAt = new Date();
-    createComment(author, text, createdAt);
-    // comments.push({ author, text, createdAt });
+    createComment(author, text, renderedHtml, createdAt);
     res.redirect('/comments');
 });
 

@@ -31,7 +31,11 @@
                     <span class="comment-date">{{this.createdAt}}</span>
                 </div>
                 <div class="comment-content">
-                    {{this.text}}
+                    {{#if this.html}}
+                        {{{this.html}}}
+                    {{else}}
+                        {{this.text}}
+                    {{/if}}
                 </div>
             </div>
             {{/each}}

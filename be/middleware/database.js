@@ -226,10 +226,10 @@ function getChatMessages(limit = 50) {
     }
 }
 
-function createComment(author, text, createdAt) {
+function createComment(author, text, renderedHtml, createdAt) {
     try {
-        const insert = db.prepare('INSERT INTO comments (author, comment) VALUES (?, ?)');
-        const result = insert.run(author, text);
+        const insert = db.prepare('INSERT INTO comments (author, comment, comment_html) VALUES (?, ?, ?)');
+        const result = insert.run(author, text, renderedHtml);
         console.log(`Comment created successfully with ID: ${result.lastInsertRowid}`);
         return result.lastInsertRowid;
     } catch (error) {
@@ -241,7 +241,7 @@ function createComment(author, text, createdAt) {
 function getCommentsWithPagination(limit = 10, offset = 0) {
     try {
         const getComments = db.prepare(`
-            SELECT c.id, c.author, c.comment as text, c.created_at as createdAt,
+            SELECT c.id, c.author, c.comment as text, c.comment_html as html, c.created_at as createdAt,
                    u.display_name, u.name_color
             FROM comments c
             LEFT JOIN users u ON c.author = u.username
