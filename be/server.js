@@ -1,4 +1,10 @@
 /*
+COS 498 Web Forum Final Project
+Author: Raist Cotroneo
+Date: 12/19/2025
+*/
+
+/*
     Main server file for the web application.
     Sets up Express server, session management, Handlebars templating,
     and Socket.io for real-time chat functionality.
