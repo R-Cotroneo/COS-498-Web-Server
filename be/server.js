@@ -2,6 +2,11 @@
 COS 498 Web Forum Final Project
 Author: Raist Cotroneo
 Date: 12/19/2025
+Purpose: This application is meant to build on the midterm forum that had little to no security and had much
+         less functionality.  This application adds many security features such as password hashing, email
+         verification, password reset tokens, input sanitization, and a database to not store passwords in plain text.
+         It also adds functionality such as real-time chat, user profiles with customizable display names and colors,
+         and the ability to use markdown formatting in posts.
 */
 
 /*
